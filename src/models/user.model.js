@@ -1,7 +1,7 @@
 
 import mongoose, {Schema}  from "mongoose";
 import jwt from "jsonwebtoken";
-import bcrypt from "bcryptjs";
+import bcrypt from "bcrypt";
 
 const userSchema = new Schema(
     {
@@ -27,7 +27,7 @@ const userSchema = new Schema(
             trim: true,
             index: true  // index for faster search
         },
-        avatar:{
+        avatar: {
             type: String,
             required: [true, "avatar is required"],
         },
@@ -50,13 +50,13 @@ const userSchema = new Schema(
         
     },
     {
-        timeseries: true
+        timestamps: true
     }
 
 )
 
 userSchema.pre("save", async function(next) {
-    if (!this.isModified("password"))  return naxt();  // If the password is not modified, skip hashing    
+    if (!this.isModified("password"))  return next();  // If the password is not modified, skip hashing    
     
     this.password = await bcrypt.hash(this.password, 10);  // Hash the password before saving it to the database
     next();
