@@ -88,8 +88,7 @@ const registerUser = asyncHandler(async (req, res) => {
 })
     
     // Check if user was created successfully
-   const createdUser =  await User.findById(user._id).select
-   ("-password -refreshToken")  // Exclude password and refreshToken from the response
+   const createdUser =  await User.findById(user._id).select("-password -refreshToken")  // Exclude password and refreshToken from the response
     if (!createdUser) {
         throw new ApiError(500, "User registering failed");
     }
@@ -108,7 +107,7 @@ const loginUser = asyncHandler(async(req, res) => {
     // check username or email
     // find the user
     // password cheeck
-    // generate access and generate token
+    // generate access and generate refresh token
     // send these into cookies
 
     
@@ -136,17 +135,16 @@ const loginUser = asyncHandler(async(req, res) => {
     // Generate access and refresh tokens
     const {accessToken, refreshToken} = await generateAccessAndRefreshTokens(user._id)
 
-    const logInUser = await User.findById(user._id).
-    select("-password -refreshToken")
+    const logInUser = await User.findById(user._id).select("-password -refreshToken")
 
-    const option = {
+    const options = {
         httpOnly: true,
         secure: true, // Set to true if using HTTPS
     }
 
     return res
-        .cookie("accessToken", accessToken, option)
-        .cookie("refreshToken", refreshToken, option)
+        .cookie("accessToken", accessToken, options)
+        .cookie("refreshToken", refreshToken, options)
         .status(200)
         .json(new ApiResponce(200, 
             {
@@ -161,50 +159,50 @@ const logoutUser = asyncHandler(async (req, res) => {
    await User.findByIdAndUpdate(
         req.user._id,
         {
-            $set: {
-                refreshToken: undefined
+            $unset: {
+                refreshToken: 1
             }
         },
         {
             new: true, // Return the updated user document
         }
     )
-     const option = {
+     const options = {
         httpOnly: true,
         secure: true, 
     }
     return res
         .status(200)
-        .cookies("acceesToken","", option)
-        .cookies("refreshToken","",option) 
+        .cookie("accessToken","", options)
+        .cookie("refreshToken","",options) 
         .json(new ApiResponce(200, {}, "User logged out successfully"))
 })
 
 const refreshAccessToken = asyncHandler(async( req, res) => 
     {
-    const incomingRefrehToken = req.cookies.refreshToken || req.body.refreshToken
+    const incomingRefreshToken = req.cookies.refreshToken || req.body?.refreshToken
 
-    if(!incomingRefrehToken){
+    if(!incomingRefreshToken){
         throw new ApiError(401, "unauthorized request")
     }
 
     try {
         const decodedToken = jwt.verify(
-            incomingRefrehToken,
+            incomingRefreshToken,
             process.env.REFRESH_TOKEN_SECRET
         )
     
-        const user = User.findById(decodedToken?._id)
-        
+        const user = await User.findById(decodedToken?._id)
+           
         if(!user){
             throw new ApiError(401, "Invaid refresh token")
         }
     
-        if (incomingRefrehToken !== user?.refreshToken){
+        if (incomingRefreshToken !== user?.refreshToken){
             throw new ApiError(401, "Refresh token is expired or used")
         }
     
-        const option ={
+        const options ={
             httpOnly: true,
             secure: true
         }
@@ -212,8 +210,8 @@ const refreshAccessToken = asyncHandler(async( req, res) =>
         const {accessToken, newrefreshToken} = await generateAccessAndRefreshTokens(user._id)
         
         return res.status(201)
-        .cookie("accessToken", accessToken,option)
-        .cookie("refreshToken", newrefreshToken,option)
+        .cookie("accessToken", accessToken,options)
+        .cookie("refreshToken", newrefreshToken,options)
         .json(
             new ApiResponce(
                 200,
@@ -435,9 +433,9 @@ const getWatchHistory = asyncHandler(async(req, res) => {
                             }
                         },
                         {
-                            $addFields: {  // find 1st value from array 
+                            $addFields: {  // find 1st value from array in database
                                 owner:{
-                                    $first: "$ownedetails"
+                                    $first: "$ownerdetails"
                                 }
                             }
                         }
