@@ -8,6 +8,7 @@ cloudinary.config({
     api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+
 const uploadOnCloudinary = async (localFilePath) => {
     try {
         if (!localFilePath) return null;
@@ -20,7 +21,7 @@ const uploadOnCloudinary = async (localFilePath) => {
         return response; // Return the URL of the uploaded file
         
     }catch (error) {
-        fs.unlinkSync(localFilePath); // Delete/remoove the localaly saved file if upload fails
+        fs.unlinkSync(localFilePath); // Delete/remove the localaly saved file if upload fails
         console.error('Error uploading to Cloudinary:', error);  // Log the error
         return null;
     }
