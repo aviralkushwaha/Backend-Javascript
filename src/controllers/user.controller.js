@@ -40,9 +40,7 @@ const registerUser = asyncHandler(async (req, res) => {
     console.log("Register user controller called");
     const{username, fullname, email, password} =req.body 
     console.log(` Taking username:
-         ${username}, 
-         and
-         email: ${email}`);
+         ${username}, and email: ${email}`);
 
     if(
         [fullname, username, email, password].some((field) => field?.trim() === "")
@@ -74,8 +72,6 @@ const registerUser = asyncHandler(async (req, res) => {
     }   
     const coverImageCloud = await uploadOnCloudinary(coverImageLocalPath)
 
-
-
     // Create a new user object with the provided details
     const user = await User.create({
         fullname,
@@ -91,7 +87,10 @@ const registerUser = asyncHandler(async (req, res) => {
     if (!createdUser) {
         throw new ApiError(500, "User registering failed");
     }
-    return res.status(200).json(
+
+    return res
+    .status(200)
+    .json(
         new ApiResponce(        
         200,createdUser, "User registered successfully"
         )        
@@ -272,9 +271,9 @@ const changeCurrentPassword = asyncHandler(async(req,res) => {
 
 })
 
-const getCurrentUser = asyncHandler(async(req,res) => {
+const getCurrentUser = asyncHandler(async(req, res) => {    
     return res.status(200)
-    .json(200,req.user,"Current user fetched successfully")
+    .json(new ApiResponce(200,req.user,"Current user fetched successfully"))
 })
 const updateAccountDetails =asyncHandler(async(req,res) => {
     const {fullname,email} =req.body
@@ -283,19 +282,20 @@ const updateAccountDetails =asyncHandler(async(req,res) => {
         throw new ApiError(400,"All fields are required")
     }
 
-    const user = User.findByIdAndUpdate(
+    const user = await User.findByIdAndUpdate(
         req.user?._id,
         {
             $set: {
-                fullname,
+                fullname: fullname,
                 email: email
             }
         },
-        {new: true}
+        {new: true} // get the updated user info
 
     ).select("-password")
 
-    return res.status(200)
+    return res
+    .status(200)
     .json(new ApiResponce(200,user," Account details updated successfully "))
 })
 
@@ -321,7 +321,7 @@ const updateAvatar = asyncHandler(async(req,res) =>  {
     ).select("-password")
 
     return res.status(200)
-    .json(200,user,"Avatar Image Updated Successfully")
+    .json(new ApiResponce(200,user,"Avatar Image Updated Successfully"))
 
 })
 const updateCoverImage = asyncHandler(async(req,res) =>  {
@@ -346,68 +346,75 @@ const updateCoverImage = asyncHandler(async(req,res) =>  {
     ).select("-password")
 
     return res.status(200)
-    .json(200,user," CoverImage Updated Successfully")
+    .json(new ApiResponce(200,user," CoverImage Updated Successfully"))
 
 
 })
 
 const getUserChannelProfile = asyncHandler(async(req,res) => {
-   const{username} = req.params;
+    // get username from request params
+    // find user by username    
+    // if user not found, return 404
+    // if user found, return user details with subscribers count and isSubscribed status
+    // if user not found, return 404
 
-   if(!username) {
+    const {username} = req.params; 
+
+   if(!username?.trim()) {
     throw new ApiError(400, "Username is missing");
    }
    const channel = await User.aggregate([
-    {
-        $match: username?.username.lowercase()
-   },
-   {
-    $lookup: {
-        from: "subscription",
-        localField: "_id",
-        foreignField: "channel",
-        as: "subsccribers"
-    }
-   },
-   {
-    $lookup: {
-        from: "subscripions",
-        localField: "_id",
-        foreignField: "subscriber",
-        as: "subscribedto"
-    }
-   },
-   {
-    $addFields: {
-        subscribersCount: {
-            $size: "$subscribers"
-        },        
-        channelSubscribedToCount: {
-            $size: "$subscribedto"
-            
-        },
-        isSubscribed: {
-            $cond: {
-            if: {
-                $in: [req.user?._id, "$subscribers.subscriber"]},
-            then: true,
-            else: false
-            }
-        }
-    }
-   },
-    {
-        $project: {
-            fullname:1,
-            username: 1,
-            subscribersCount: 1,
-            channelSubscribedToCount: 1,
-            isSubscribed: 1,
-            avatar: 1, 
-            coverImage: 1,
-            email: 1,
-        }
-    }
+            {
+                $match:
+                { username: username?.toLowerCase()
+            }},
+                {
+                    $lookup: {
+                        from: "subscriptions",
+                        localField: "_id",
+                        foreignField: "channel",
+                        as: "subscribers"
+                    }
+                },
+                        {
+                            $lookup: {
+                                from: "subscripions",
+                                localField: "_id",
+                                foreignField: "subscriber",
+                                as: "subscribedto"
+                            }
+                        },
+                        {
+                            $addFields: {
+                                subscribersCount: {
+                                    $size: "$subscribers"
+                                },        
+                                channelSubscribedToCount: {
+                                    $size: "$subscribedto"
+                                    
+                                },
+                                isSubscribed: {
+                                    $cond: {
+                                    if: {
+                                        $in: [req.user?._id, "$subscribers.subscriber"]},
+                                    then: true,
+                                    else: false
+                                    }
+                                }
+                            }
+                        },
+                            {
+                                $project: {
+                                    fullname:1,
+                                    username: 1,
+                                    subscribersCount: 1,
+                                    channelSubscribedToCount: 1,
+                                    isSubscribed: 1,
+                                    avatar: 1, 
+                                    coverImage: 1,
+                                    email: 1,
+                                }
+                            }
 ])
     if(!channel || channel.length === 0) {
      throw new ApiError(404, "Channel not found");
@@ -466,7 +473,8 @@ const getWatchHistory = asyncHandler(async(req, res) => {
      .status(200)
      .json(
         new ApiResponce(
-            200, userId[0]?.watchHistory,"Watch history fetched successfully"
+            200, userId[0]?.watchHistory || [],
+            "Watch history fetched successfully"
          )
     )
 })
