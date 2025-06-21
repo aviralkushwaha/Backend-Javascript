@@ -22,10 +22,11 @@ app.use(cookieParser())     // acess the user cookies and  set them using cookie
 
 // routes import
 import userRouter from './routes/user.routes.js';
+import uploadRouter from "./routes/video.router.js"
 
 // router declaration
 app.use("/api/v1/users", userRouter); // use the user router for all user related routes
-
+app.use("/api/v1/users", uploadRouter)
 
 
 

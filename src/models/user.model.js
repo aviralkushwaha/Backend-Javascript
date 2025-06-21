@@ -28,11 +28,24 @@ const userSchema = new Schema(
             index: true  // index for faster search
         },
         avatar: {
-            type: String,
-            required: [true, "avatar is required"],
+            public_id: {
+                type: String,
+                required: true
+            },
+            url: {
+                type: String,
+                required: true
+            }
         },
         coverImage: {
-            type: String,        
+            public_id: {
+                type: String,
+                required: true
+            },
+            url: {
+                type: String,
+                required: true
+            }        
         },
         watchHistory:{
             type:Schema.Types.ObjectId,
